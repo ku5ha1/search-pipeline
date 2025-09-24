@@ -1,7 +1,7 @@
-azure-ai-documentintelligence==1.0.0b4
-azure-search-documents==11.6.0
-azure-core==1.30.2
-requests==2.32.5
-python-dotenv==1.0.1
-fastapi==0.117.1
-uvicorn==0.37.0
+azure-ai-documentintelligence
+azure-search-documents
+azure-core
+requests
+python-dotenv
+fastapi
+uvicorn
