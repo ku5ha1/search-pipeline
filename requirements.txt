@@ -1,2 +1,4 @@
 fastapi 
 uvicorn 
+azure-ai-documentintelligence==1.0.0b4
+python-dotenv
