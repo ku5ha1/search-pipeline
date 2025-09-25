@@ -3,6 +3,7 @@ from pydantic import BaseModel
 import os, requests
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
+from azure.search.documents.models import VectorizedQuery
 
 app = FastAPI()
 
@@ -34,9 +35,10 @@ def search(req: SearchRequest):
     if req.year is not None: filt.append(f"year eq {req.year}")
     if req.month is not None: filt.append(f"month eq {req.month}")
     filt_str = " and ".join(filt) if filt else None
+    vq = VectorizedQuery(vector=vec, k_nearest_neighbors=req.top_k, fields="embedding")
     results = sc.search(
         search_text=req.query,
-        vector={"value": vec, "k": req.top_k, "fields": "embedding"},
+        vector_queries=[vq],
         top=req.top_k,
         filter=filt_str,
         semantic_configuration_name="default",
