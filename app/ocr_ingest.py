@@ -38,18 +38,16 @@ def ocr_pdf_bytes(pdf_bytes: bytes) -> dict:
 
     structured_result = {
     "pages": []
-}
+    }
     for page in result.pages:
-        print(f"----Analyzing document from page #{page.page_number}----")
-        print(f"Page has width: {page.width} and height: {page.height}, measured with unit: {page.unit}")
-
-        if page.lines:
-            for line_idx, line in enumerate(page.lines):
-                print(
-                    f"...Line #{line_idx} has text '{line.content}' within bounding polygon '{line.polygon}'"
-                )
-
-
+        page_text = "\n".join([line.content for line in page.lines])
+        structured_result["pages"].append({
+            "page_number": page.page_number,
+            "content": page_text,
+            "lines": [{"text": line.content, "polygon": line.polygon} for line in page.lines]
+        })
+        
+    return structured_result
 
 def main():
     print(f"Listing PDFs in container '{INPUT_CONTAINER}':")
@@ -62,12 +60,11 @@ def main():
         ocr_result = ocr_pdf_bytes(pdf_bytes)
 
         base_name = os.path.basename(pdf_blob_name).replace(".pdf", "")
-        try:
-            year, month = base_name.split("-")[:2]
-        except ValueError:
-            
-            year, month = "unknown", base_name
-
+        parts = base_name.split(" ")
+        if len(parts) >= 2:
+            month, year = parts[0], parts[1]
+        else:
+            month, year = "unknown", base_name
         json_path = f"{year}/{month}.json"
 
         output_container.upload_blob(
