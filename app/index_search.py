@@ -22,8 +22,7 @@ SEARCH_KEY = os.getenv("AZURE_SEARCH_KEY")
 INDEX_NAME = os.getenv("AZURE_SEARCH_INDEX", "mok-chunks")
 
 
-def ensure_index(dim: int = 3072):
-    
+def ensure_index(dim: int):
     sic = SearchIndexClient(SEARCH_ENDPOINT, AzureKeyCredential(SEARCH_KEY))
 
     fields = [
@@ -38,41 +37,38 @@ def ensure_index(dim: int = 3072):
             name="embedding",
             type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
             vector_search_dimensions=dim,
-            vector_search_configuration="hnsw"
+            vector_search_profile_name="default"
         ),
-        SimpleField(name="source_blob_url", type=SearchFieldDataType.String, filterable=False, sortable=False)
+        SimpleField(name="source_blob_url", type=SearchFieldDataType.String, filterable=False, sortable=False),
     ]
 
-    vs = VectorSearch(
-        algorithms=[HnswAlgorithmConfiguration(name="hnsw")],
-        algorithm_configurations=[VectorSearchAlgorithmConfiguration(name="hnsw", kind="hnsw")]
+    vector_search = VectorSearch(
+        profiles=[{"name": "default", "algorithm": "hnsw"}],
+        algorithms=[{"name": "hnsw", "kind": "hnsw"}]
     )
 
-    sem = [
-        SemanticConfiguration(
-            name="default",
-            prioritized_fields=SemanticPrioritizedFields(
-                content_fields=[SemanticField(field_name="text")]
-            )
+    semantic_config = SemanticConfiguration(
+        name="default",
+        prioritized_fields=SemanticPrioritizedFields(
+            content_fields=[SemanticField(field_name="text")]
         )
-    ]
+    )
 
     index = SearchIndex(
         name=INDEX_NAME,
         fields=fields,
-        vector_search=vs,
-        semantic_configurations=sem
+        vector_search=vector_search,
+        semantic_configurations=[semantic_config]
     )
 
     try:
         sic.create_index(index)
-        print(f"Index '{INDEX_NAME}' created successfully.")
-    except ResourceExistsError:
-        print(f"Index '{INDEX_NAME}' already exists.")
-    except HttpResponseError as e:
-        print(f"[ERROR] Failed to create index: {e}")
-        raise e
-
+        print(f"[INFO] Created new index {INDEX_NAME}")
+    except Exception as e:
+        if "ResourceNameAlreadyInUse" in str(e):
+            print(f"[INFO] Index {INDEX_NAME} already exists — using existing index")
+        else:
+            raise
 
 def upsert_chunks(docs: list[dict], batch_size: int = 1000):
     

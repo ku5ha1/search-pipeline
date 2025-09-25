@@ -1,6 +1,9 @@
 import os
 import requests
 from typing import List
+from dotenv import load_dotenv
+
+load_dotenv()
 
 AOAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 if not AOAI_ENDPOINT:
