@@ -87,3 +87,29 @@ def search(req: SearchRequest):
         "count": getattr(results, 'get_count', lambda: None)(),
         "results": out
     }
+
+@app.get("/debug/index")
+def debug_index():
+    sc = SearchClient(SEARCH_ENDPOINT, INDEX_NAME, AzureKeyCredential(SEARCH_KEY))
+    # Total document count
+    resp = sc.search(search_text="*", include_total_count=True, top=0)
+    total = resp.get_count()
+    # Facets for year and month
+    facets_resp = sc.search(search_text="*", facets=["year,count:50", "month,count:12"], top=0)
+    # Sample one doc (without filter)
+    sample_list = []
+    for r in sc.search(search_text="*", top=1):
+        sample_list.append({
+            "chunk_id": r.get("chunk_id"),
+            "pdf_id": r.get("pdf_id"),
+            "year": r.get("year"),
+            "month": r.get("month"),
+            "page_start": r.get("page_start"),
+        })
+        break
+    return {
+        "index": INDEX_NAME,
+        "total_docs": total,
+        "facets": getattr(facets_resp, 'facets', None),
+        "sample": sample_list
+    }
