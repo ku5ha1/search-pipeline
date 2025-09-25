@@ -1,5 +1,6 @@
 import os
 import json
+import requests
 from dotenv import load_dotenv
 from azure.storage.blob import BlobServiceClient
 from azure.ai.documentintelligence import DocumentIntelligenceClient
@@ -74,6 +75,13 @@ def main():
         )
         print(f"Uploaded structured JSON to {OUTPUT_CONTAINER}/{json_path}")
 
+
+def ocr_pdf_url(pdf_url: str) -> dict:
+
+    r = requests.get(pdf_url)
+    r.raise_for_status()
+    pdf_bytes = r.content
+    return ocr_pdf_bytes(pdf_bytes)
 
 if __name__ == "__main__":
     main()
