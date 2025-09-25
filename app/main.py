@@ -55,9 +55,10 @@ def search(req: SearchRequest):
 
     vq = VectorizedQuery(vector=vec, k_nearest_neighbors=req.top_k, fields="embedding")
     results, mode = None, "semantic"
+    total_count = None
 
     try:
-        results = sc.search(
+        resp = sc.search(
             search_text=req.query,
             vector_queries=[vq],
             top=req.top_k,
@@ -66,26 +67,41 @@ def search(req: SearchRequest):
             query_type="semantic",
             include_total_count=True
         )
+        results = list(resp)
+        try:
+            total_count = resp.get_count()
+        except Exception:
+            total_count = None
     except HttpResponseError:
 
         mode = "vector+keyword"
         try:
-            results = sc.search(
+            resp = sc.search(
                 search_text=req.query,
                 vector_queries=[vq],
                 top=req.top_k,
                 filter=filt_str,
                 include_total_count=True
             )
+            results = list(resp)
+            try:
+                total_count = resp.get_count()
+            except Exception:
+                total_count = None
         except HttpResponseError:
 
             mode = "vector+keyword_no_filter"
-            results = sc.search(
+            resp = sc.search(
                 search_text=req.query,
                 vector_queries=[vq],
                 top=req.top_k,
                 include_total_count=True
             )
+            results = list(resp)
+            try:
+                total_count = resp.get_count()
+            except Exception:
+                total_count = None
 
     out = []
     for i, r in enumerate(results):
@@ -106,7 +122,7 @@ def search(req: SearchRequest):
         "top_k": req.top_k,
         "filter_applied": filt_str,
         "mode": mode,
-        "count": getattr(results, "get_count", lambda: None)(),
+        "count": total_count,
         "results": out
     }
 
