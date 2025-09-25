@@ -1,27 +1,82 @@
 import os
+import json
 from dotenv import load_dotenv
 from azure.storage.blob import BlobServiceClient
+from azure.ai.documentintelligence import DocumentIntelligenceClient
+from azure.core.credentials import AzureKeyCredential
+from io import BytesIO
 
 load_dotenv()
 
-connect_str = os.getenv('AZURE_STORAGE_CONNECTION_STRING')
-if not connect_str:
-    raise ValueError("AZURE_STORAGE_CONNECTION_STRING not found in environment")
+# Azure Blob Storage
+STORAGE_CONN_STR = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+if not STORAGE_CONN_STR:
+    raise ValueError("STORAGE_CONN_STR not found")
+    
+INPUT_CONTAINER = os.getenv("AZURE_STORAGE_CONTAINER_NAME")
+if not INPUT_CONTAINER:
+    raise ValueError("INPUT_CONTAINER not found")
+    
+OUTPUT_CONTAINER = os.getenv("AZURE_STORAGE_OUTPUT_CONTAINER_NAME")
+if not OUTPUT_CONTAINER:
+    raise ValueError("OUTPUT_CONTAINER not found")
 
-container_name = os.getenv('AZURE_STORAGE_CONTAINER_NAME')
-if not container_name:
-    raise ValueError("CONTAINER NAME not found in environment")
+DOCINT_ENDPOINT = os.getenv("DOCINT_ENDPOINT")
+DOCINT_KEY = os.getenv("DOCINT_KEY")
+if not DOCINT_ENDPOINT or not DOCINT_KEY:
+    raise ValueError("DOCINT_ENDPOINT or DOCINT_KEY not found in environment")
 
-blob_service_client = BlobServiceClient.from_connection_string(connect_str)
+blob_service = BlobServiceClient.from_connection_string(STORAGE_CONN_STR)
+input_container = blob_service.get_container_client(INPUT_CONTAINER)
+output_container = blob_service.get_container_client(OUTPUT_CONTAINER)
+docint_client = DocumentIntelligenceClient(DOCINT_ENDPOINT, AzureKeyCredential(DOCINT_KEY))
 
-container_client = blob_service_client.get_container_client(container_name)
+def ocr_pdf_bytes(pdf_bytes: bytes) -> dict:
+    stream = BytesIO(pdf_bytes)
+    poller = docint_client.begin_analyze_document("prebuilt-read", stream)
+    result = poller.result()
 
-try:
-    print(f"Listing blobs in container '{container_name}':")
-    blob_list = container_client.list_blobs()
-    for blob in blob_list:
-        print("\t" + blob.name)
+    structured_result = {
+    "pages": []
+}
+    for page in result.pages:
+        print(f"----Analyzing document from page #{page.page_number}----")
+        print(f"Page has width: {page.width} and height: {page.height}, measured with unit: {page.unit}")
 
-except Exception as ex:
-    print("Exception:")
-    print(ex)
+        if page.lines:
+            for line_idx, line in enumerate(page.lines):
+                print(
+                    f"...Line #{line_idx} has text '{line.content}' within bounding polygon '{line.polygon}'"
+                )
+
+
+
+def main():
+    print(f"Listing PDFs in container '{INPUT_CONTAINER}':")
+    pdf_blobs = [b.name for b in input_container.list_blobs() if b.name.lower().endswith(".pdf")]
+    for pdf_blob_name in pdf_blobs:
+        print(f"\nProcessing: {pdf_blob_name}")
+
+        pdf_bytes = input_container.download_blob(pdf_blob_name).readall()
+
+        ocr_result = ocr_pdf_bytes(pdf_bytes)
+
+        base_name = os.path.basename(pdf_blob_name).replace(".pdf", "")
+        try:
+            year, month = base_name.split("-")[:2]
+        except ValueError:
+            
+            year, month = "unknown", base_name
+
+        json_path = f"{year}/{month}.json"
+
+        output_container.upload_blob(
+            name=json_path,
+            data=json.dumps(ocr_result, ensure_ascii=False, indent=2),
+            overwrite=True
+        )
+        print(f"Uploaded structured JSON to {OUTPUT_CONTAINER}/{json_path}")
+
+
+if __name__ == "__main__":
+    main()
