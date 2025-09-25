@@ -8,7 +8,7 @@ def chunk_pages(pages: list, max_chars=900, overlap=120):
         while start < len(text):
             end = min(len(text), start + max_chars)
             chunk_text = text[start:end]
-            chunk_id = f"{pg['pdf_id']}_p{pg['page_number']}_o{start}"
+            chunk_id = f"{pg['pdf_id']}_p{pg['page_number']}_o{start}".replace(" ", "_")
             chunks.append({
                 "chunk_id": str(chunk_id),             
                 "pdf_id": str(pg["pdf_id"]),           
