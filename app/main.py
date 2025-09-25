@@ -4,6 +4,7 @@ import os, requests
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from azure.search.documents.models import VectorizedQuery
+from azure.core.exceptions import HttpResponseError
 
 app = FastAPI()
 
@@ -36,14 +37,35 @@ def search(req: SearchRequest):
     if req.month is not None: filt.append(f"month eq {req.month}")
     filt_str = " and ".join(filt) if filt else None
     vq = VectorizedQuery(vector=vec, k_nearest_neighbors=req.top_k, fields="embedding")
-    results = sc.search(
-        search_text=req.query,
-        vector_queries=[vq],
-        top=req.top_k,
-        filter=filt_str,
-        semantic_configuration_name="default",
-        query_type="semantic"
-    )
+    mode = "semantic"
+    try:
+        results = sc.search(
+            search_text=req.query,
+            vector_queries=[vq],
+            top=req.top_k,
+            filter=filt_str,
+            semantic_configuration_name="default",
+            query_type="semantic",
+            include_total_count=True
+        )
+    except HttpResponseError:
+        try:
+            mode = "vector+keyword"
+            results = sc.search(
+                search_text=req.query,
+                vector_queries=[vq],
+                top=req.top_k,
+                filter=filt_str,
+                include_total_count=True
+            )
+        except HttpResponseError:
+            mode = "vector+keyword_no_filter"
+            results = sc.search(
+                search_text=req.query,
+                vector_queries=[vq],
+                top=req.top_k,
+                include_total_count=True
+            )
     out = []
     for i, r in enumerate(results):
         out.append({
@@ -57,4 +79,11 @@ def search(req: SearchRequest):
             "source_blob_url": r.get("source_blob_url"),
             "snippet": (r["text"][:250] + "…") if r.get("text") else ""
         })
-    return {"results": out}
+    return {
+        "query": req.query,
+        "top_k": req.top_k,
+        "filter_applied": filt_str,
+        "mode": mode,
+        "count": getattr(results, 'get_count', lambda: None)(),
+        "results": out
+    }
