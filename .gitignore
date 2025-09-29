@@ -6,6 +6,8 @@ __pycache__/
 *.pyd
 
 .env
-# data/
+data/
 
 test.py
+
+compress.py

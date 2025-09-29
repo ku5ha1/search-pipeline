@@ -39,7 +39,7 @@ def embed_query(q: str) -> list[float]:
     return data["data"][0]["embedding"]
 
 
-@app.post("/search")
+@app.post("/search") 
 def search(req: SearchRequest):
     try:
         vec = embed_query(req.query)
