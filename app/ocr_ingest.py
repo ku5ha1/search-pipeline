@@ -6,18 +6,18 @@ from azure.storage.blob import BlobServiceClient
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.core.credentials import AzureKeyCredential
 from io import BytesIO
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 load_dotenv()
 
-# Azure Blob Storage
 STORAGE_CONN_STR = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 if not STORAGE_CONN_STR:
     raise ValueError("STORAGE_CONN_STR not found")
-    
+
 INPUT_CONTAINER = os.getenv("AZURE_STORAGE_CONTAINER_NAME")
 if not INPUT_CONTAINER:
     raise ValueError("INPUT_CONTAINER not found")
-    
+
 OUTPUT_CONTAINER = os.getenv("AZURE_STORAGE_OUTPUT_CONTAINER_NAME")
 if not OUTPUT_CONTAINER:
     raise ValueError("OUTPUT_CONTAINER not found")
@@ -37,9 +37,7 @@ def ocr_pdf_bytes(pdf_bytes: bytes) -> dict:
     poller = docint_client.begin_analyze_document("prebuilt-read", stream)
     result = poller.result()
 
-    structured_result = {
-        "pages": []
-    }
+    structured_result = {"pages": []}
     for page in result.pages:
         page_text = "\n".join([line.content for line in page.lines])
         structured_result["pages"].append({
@@ -50,31 +48,44 @@ def ocr_pdf_bytes(pdf_bytes: bytes) -> dict:
 
     return structured_result
 
-def main():
-    for b in input_container.list_blobs():
-        print("Found blob:", b.name)
+def process_blob(pdf_blob_name: str):
+    try:
+        print(f"Processing in background: {pdf_blob_name}")
 
-    pdf_blobs = [b.name for b in input_container.list_blobs() if b.name.lower().endswith(".pdf")]
-
-    for pdf_blob_name in pdf_blobs:
-        print(f"\nProcessing: {pdf_blob_name}")
-
-        # Download PDF
         pdf_bytes = input_container.download_blob(pdf_blob_name).readall()
 
-        # OCR
         ocr_result = ocr_pdf_bytes(pdf_bytes)
-
-        # Mirror folder structure, just change extension to .json
+        
         json_path = pdf_blob_name.replace(".pdf", ".json")
 
-        # Upload JSON to output container in same hierarchy
         output_container.upload_blob(
             name=json_path,
             data=json.dumps(ocr_result, ensure_ascii=False, indent=2),
             overwrite=True
         )
-        print(f"Uploaded structured JSON to {OUTPUT_CONTAINER}/{json_path}")
+        return f"Uploaded {OUTPUT_CONTAINER}/{json_path}"
+    except Exception as e:
+        return f"Error processing {pdf_blob_name}: {e}"
+
+def main():
+    pdf_blobs = [b.name for b in input_container.list_blobs() if b.name.lower().endswith(".pdf")]
+
+    if not pdf_blobs:
+        print("No PDFs found in input container.")
+        return
+
+    print(f"Found {len(pdf_blobs)} PDFs. Starting background OCR...")
+
+    results = []
+    
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        future_to_blob = {executor.submit(process_blob, blob): blob for blob in pdf_blobs}
+        for future in as_completed(future_to_blob):
+            results.append(future.result())
+
+    print("\n--- Summary ---")
+    for r in results:
+        print(r)
 
 def ocr_pdf_url(pdf_url: str) -> dict:
     r = requests.get(pdf_url)
@@ -84,6 +95,7 @@ def ocr_pdf_url(pdf_url: str) -> dict:
 
 if __name__ == "__main__":
     main()
+
 
 # import os
 # from dotenv import load_dotenv
