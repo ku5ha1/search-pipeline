@@ -8,3 +8,4 @@ uvicorn==0.37.0
 pydantic==2.11.9
 azure-storage-blob
 azure-identity
+azure-functions
