@@ -16,10 +16,21 @@ from azure.search.documents.indexes.models import (
     SemanticPrioritizedFields
 )
 from azure.search.documents import SearchClient
+from dotenv import load_dotenv
+
+load_dotenv()
 
 SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT")
 SEARCH_KEY = os.getenv("AZURE_SEARCH_KEY")
 INDEX_NAME = os.getenv("AZURE_SEARCH_INDEX", "mok-chunks")
+
+index_client = SearchIndexClient(endpoint=SEARCH_ENDPOINT, credential=AzureKeyCredential(SEARCH_KEY))
+index = index_client.get_index(INDEX_NAME)
+
+
+print(f"Fields in index '{INDEX_NAME}':")
+for field in index.fields:
+    print(f"- {field.name} ({field.type})")
 
 
 def ensure_index(dim: int):
