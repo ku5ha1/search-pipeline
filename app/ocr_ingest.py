@@ -38,7 +38,7 @@ def ocr_pdf_bytes(pdf_bytes: bytes) -> dict:
     result = poller.result()
 
     structured_result = {
-    "pages": []
+        "pages": []
     }
     for page in result.pages:
         page_text = "\n".join([line.content for line in page.lines])
@@ -47,27 +47,28 @@ def ocr_pdf_bytes(pdf_bytes: bytes) -> dict:
             "content": page_text,
             "lines": [{"text": line.content, "polygon": line.polygon} for line in page.lines]
         })
-        
+
     return structured_result
 
 def main():
-    print(f"Listing PDFs in container '{INPUT_CONTAINER}':")
+    for b in input_container.list_blobs():
+        print("Found blob:", b.name)
+
     pdf_blobs = [b.name for b in input_container.list_blobs() if b.name.lower().endswith(".pdf")]
+
     for pdf_blob_name in pdf_blobs:
         print(f"\nProcessing: {pdf_blob_name}")
 
+        # Download PDF
         pdf_bytes = input_container.download_blob(pdf_blob_name).readall()
 
+        # OCR
         ocr_result = ocr_pdf_bytes(pdf_bytes)
 
-        base_name = os.path.basename(pdf_blob_name).replace(".pdf", "")
-        parts = base_name.split(" ")
-        if len(parts) >= 2:
-            month, year = parts[0], parts[1]
-        else:
-            month, year = "unknown", base_name
-        json_path = f"{year}/{month}.json"
+        # Mirror folder structure, just change extension to .json
+        json_path = pdf_blob_name.replace(".pdf", ".json")
 
+        # Upload JSON to output container in same hierarchy
         output_container.upload_blob(
             name=json_path,
             data=json.dumps(ocr_result, ensure_ascii=False, indent=2),
@@ -75,9 +76,7 @@ def main():
         )
         print(f"Uploaded structured JSON to {OUTPUT_CONTAINER}/{json_path}")
 
-
 def ocr_pdf_url(pdf_url: str) -> dict:
-
     r = requests.get(pdf_url)
     r.raise_for_status()
     pdf_bytes = r.content
