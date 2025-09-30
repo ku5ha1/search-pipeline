@@ -4,8 +4,11 @@ from app.normalize import normalize_ocr
 from app.chunk import chunk_pages
 from app.embed import embed_texts
 from app.index_search import ensure_index, upsert_chunks
+from dotenv import load_dotenv 
 
-# --- Environment ---
+load_dotenv()
+
+
 STORAGE_CONN_STR = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
 OUTPUT_CONTAINER = os.getenv("AZURE_STORAGE_OUTPUT_CONTAINER_NAME")
 if not STORAGE_CONN_STR or not OUTPUT_CONTAINER:
@@ -13,6 +16,9 @@ if not STORAGE_CONN_STR or not OUTPUT_CONTAINER:
 
 blob_service = BlobServiceClient.from_connection_string(STORAGE_CONN_STR)
 output_container = blob_service.get_container_client(OUTPUT_CONTAINER)
+
+json_blobs = [b.name for b in output_container.list_blobs() if b.name.endswith(".json")]
+print(f"Found {len(json_blobs)} OCR JSON files")
 
 def load_ocr_json_from_blob(json_path: str) -> dict:
     """Download OCR result JSON from extracted-json container"""
