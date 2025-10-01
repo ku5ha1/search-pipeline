@@ -22,16 +22,14 @@
 # Use slim Python 3.10 base
 FROM python:3.10-slim
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements and app folder
 COPY requirements.txt .
-COPY app/ ./app
+COPY ./app ./  
 
 # Install dependencies
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set default command to run the pipeline
-CMD ["python", "-m", "app.run_pipeline"]
+CMD ["python", "run_pipeline.py"]

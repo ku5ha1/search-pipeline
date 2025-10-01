@@ -22,7 +22,7 @@ load_dotenv()
 
 SEARCH_ENDPOINT = os.getenv("AZURE_SEARCH_ENDPOINT")
 SEARCH_KEY = os.getenv("AZURE_SEARCH_KEY")
-INDEX_NAME = os.getenv("AZURE_SEARCH_INDEX", "mok-chunks")
+INDEX_NAME = os.getenv("AZURE_SEARCH_INDEX")
 
 index_client = SearchIndexClient(endpoint=SEARCH_ENDPOINT, credential=AzureKeyCredential(SEARCH_KEY))
 index = index_client.get_index(INDEX_NAME)
@@ -97,3 +97,4 @@ def upsert_chunks(docs: list[dict], batch_size: int = 1000):
             raise e
 
     return results
+
