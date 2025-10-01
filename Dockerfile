@@ -1,16 +1,20 @@
-FROM mcr.microsoft.com/azure-functions/python:4-python3.10
+# Use lightweight Python base
+FROM python:3.10-slim
 
 # Set working directory
-WORKDIR /home/site/wwwroot
+WORKDIR /app
 
-# Copy function app files
+# Copy requirements and install
 COPY requirements.txt .
-COPY host.json .
-COPY function_app.py .
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install "uvicorn[standard]"
+
+# Copy the app
 COPY app/ ./app
 
-# Install Python dependencies
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+# Expose FastAPI port
+EXPOSE 8000
 
-# The Azure Functions runtime auto-starts the function; no CMD needed
+# Command to run FastAPI
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
