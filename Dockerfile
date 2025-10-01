@@ -34,5 +34,4 @@ RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set default command to run the pipeline
-CMD ["python", "app.run_pipeline.py"]
-
+CMD ["python", "-m", "app.run_pipeline"]

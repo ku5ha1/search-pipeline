@@ -3,10 +3,10 @@ import sys
 import json
 import time
 from azure.storage.blob import BlobServiceClient
-from .normalize import normalize_ocr
-from .chunk import chunk_pages
-from .embed import embed_texts
-from .index_search import ensure_index, upsert_chunks
+from normalize import normalize_ocr
+from chunking import chunk_pages
+from embed import embed_texts
+from index_search import ensure_index, upsert_chunks
 from dotenv import load_dotenv
 
 load_dotenv()
