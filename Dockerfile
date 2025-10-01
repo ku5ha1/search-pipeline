@@ -26,8 +26,7 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Copy only necessary files
-COPY requirements.txt .
-COPY run_pipeline.py .
+COPY requirements.txt . 
 COPY app/ ./app
 
 # Install dependencies
@@ -35,4 +34,4 @@ RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set default command to run the pipeline on container start
-CMD ["python", "run_pipeline.py"]
+CMD ["python", "app/run_pipeline.py"]
