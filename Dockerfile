@@ -27,15 +27,15 @@ WORKDIR /app
 
 # Copy requirements and app folder
 COPY requirements.txt .
-COPY server.py .
 COPY app/ ./app
 
 # Install dependencies
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port for Railway
+# Expose port for Render/Railway
 EXPOSE 8000
 
-# Start FastAPI server (runs pipeline in background)
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start FastAPI server
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
