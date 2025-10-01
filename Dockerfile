@@ -19,22 +19,23 @@
 # # Command to run FastAPI
 # CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
-# Base Python image
+# Use slim Python 3.10 base
 FROM python:3.10-slim
 
 # Set working directory
 WORKDIR /app
 
-# Copy files
+# Copy requirements and app folder
 COPY requirements.txt .
+COPY server.py .
 COPY app/ ./app
 
 # Install dependencies
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Add /app to PYTHONPATH so 'from app.*' works
-ENV PYTHONPATH=/app
+# Expose port for Railway
+EXPOSE 8000
 
-# Run pipeline on container start
-CMD ["python", "app/run_pipeline.py"]
+# Start FastAPI server (runs pipeline in background)
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
