@@ -34,4 +34,4 @@ RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Set default command to run the pipeline on container start
-CMD ["python", "app/run_pipeline.py"]
+CMD ["python", "run_pipeline.py"]
