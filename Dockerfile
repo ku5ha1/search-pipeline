@@ -1,35 +1,35 @@
-# # Use lightweight Python base
-# FROM python:3.10-slim
-
-# # Set working directory
-# WORKDIR /app
-
-# # Copy requirements and install
-# COPY requirements.txt .
-# RUN pip install --upgrade pip \
-#     && pip install --no-cache-dir -r requirements.txt \
-#     && pip install "uvicorn[standard]"
-
-# # Copy the app
-# COPY app/ ./app
-
-# # Expose FastAPI port
-# EXPOSE 8000
-
-# # Command to run FastAPI
-# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-# Use slim Python 3.10 base
+# Use lightweight Python base
 FROM python:3.10-slim
 
+# Set working directory
 WORKDIR /app
 
+# Copy requirements and install
 COPY requirements.txt .
-COPY ./app ./  
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install "uvicorn[standard]"
 
-# Install dependencies
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy the app
+COPY app/ ./app
 
-# Set default command to run the pipeline
-CMD ["python", "run_pipeline.py"]
+# Expose FastAPI port
+EXPOSE 8000
+
+# Command to run FastAPI
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# # Use slim Python 3.10 base
+# FROM python:3.10-slim
+
+# WORKDIR /app
+
+# COPY requirements.txt .
+# COPY ./app ./  
+
+# # Install dependencies
+# RUN pip install --upgrade pip
+# RUN pip install --no-cache-dir -r requirements.txt
+
+# # Set default command to run the pipeline
+# CMD ["python", "run_pipeline.py"]
